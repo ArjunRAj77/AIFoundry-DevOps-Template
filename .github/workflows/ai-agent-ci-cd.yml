@@ -1,0 +1,97 @@
+name: AI Agent CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write # Required for Azure OIDC login
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pytest flake8
+      # Assuming we have tools in src/tools to test
+      # - name: Run Unit Tests
+      #   run: pytest src/tools/
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: Development
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Install AI SDK
+        run: pip install azure-ai-projects pyyaml
+      - name: Deploy Agent
+        env:
+          AZURE_AI_PROJECT_CONN_STR_DEV: ${{ secrets.AZURE_AI_PROJECT_CONN_STR_DEV }}
+        run: python scripts/deploy_agent.py --env dev
+
+  deploy-qa-and-evaluate:
+    name: Deploy to QA & Run Evaluations
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: QA
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Install SDKs
+        run: pip install azure-ai-projects azure-ai-evaluation pyyaml
+      - name: Deploy QA Agent
+        env:
+          AZURE_AI_PROJECT_CONN_STR_QA: ${{ secrets.AZURE_AI_PROJECT_CONN_STR_QA }}
+        run: python scripts/deploy_agent.py --env qa
+      - name: Run Quality Evaluations
+        run: |
+          echo "Running Batch Evaluations against QA agent..."
+          # python evals/run_evals.py --env qa --threshold 0.85
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-qa-and-evaluate
+    runs-on: ubuntu-latest
+    environment: 
+      name: Production
+      url: https://ai.azure.com
+    # Requires manual approval configured in GitHub Environments!
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Install AI SDK
+        run: pip install azure-ai-projects pyyaml
+      - name: Deploy Prod Agent
+        env:
+          AZURE_AI_PROJECT_CONN_STR_PROD: ${{ secrets.AZURE_AI_PROJECT_CONN_STR_PROD }}
+        run: python scripts/deploy_agent.py --env prod

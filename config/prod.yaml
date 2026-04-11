@@ -1,0 +1,10 @@
+# Prod Environment Configuration
+environment: prod
+azure:
+  project_connection_string: "env:AZURE_AI_PROJECT_CONN_STR_PROD"
+agent:
+  name: "CustomerSupportAgent-Prod"
+  model_deployment_name: "gpt-4o-prod-ptu" # Provisioned Throughput Unit for Prod
+  temperature: 0.2 # Lower temp for more deterministic prod behavior
+tools:
+  database_connection: "prod_db_readonly_endpoint"

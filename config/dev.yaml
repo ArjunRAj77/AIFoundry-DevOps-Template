@@ -1,0 +1,10 @@
+# Dev Environment Configuration
+environment: dev
+azure:
+  project_connection_string: "env:AZURE_AI_PROJECT_CONN_STR_DEV"
+agent:
+  name: "CustomerSupportAgent-Dev"
+  model_deployment_name: "gpt-4o-mini-dev"
+  temperature: 0.7
+tools:
+  database_connection: "dev_db_endpoint"
