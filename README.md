@@ -56,9 +56,11 @@ As AI moves from prototype to production, building agents manually in a UI falls
    The agent's identity (`src/agent/system_prompt.txt`), capabilities (`src/tools/`), and model configurations are version-controlled. 
 2. **Environment Isolation (`config/`):**
    Configurations define environment-specific bindings. For example, the Dev config binds the agent to a Dev database tool, while Prod binds to a read-only Prod replica.
-3. **Automated Deployment (`scripts/deploy_agent.py`):**
+3. **Model Flexibility:**
+   The AI model is parameterized in the `config/{env}.yaml` files. You can easily switch models (e.g., from `gpt-4o-mini` to a Llama 3 deployment) by simply updating the `model_deployment_name` string. This allows you to use cheaper, faster models in `dev` and heavy-duty Provisioned Throughput (PTU) models in `prod`.
+4. **Automated Deployment (`scripts/deploy_agent.py`):**
    The pipeline executes this script, which uses the `azure-ai-projects` SDK to upsert the agent into the respective Azure AI Project based on the active environment configuration.
-4. **Data & Evaluation (`evals/`):**
+5. **Data & Evaluation (`evals/`):**
    Before an agent reaches Production, it must pass a quantitative evaluation using Golden datasets (`evals/datasets/`).
 
 ## Project Structure

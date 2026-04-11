@@ -4,7 +4,7 @@ import argparse
 
 # In a real environment, you import the Azure SDK:
 # from azure.ai.projects import AIProjectClient
-# from azure.ai.projects.models import ToolSet, FunctionTool, AzureAISearchTool
+# from azure.ai.projects.models import ToolSet, FunctionTool, AzureAISearchTool, CodeInterpreterTool, BingGroundingTool
 # from azure.identity import DefaultAzureCredential
 # from src.tools.system_status import check_system_status
 
