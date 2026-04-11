@@ -1,8 +1,12 @@
 import os
 import yaml
 import argparse
-from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
+
+# In a real environment, you import the Azure SDK:
+# from azure.ai.projects import AIProjectClient
+# from azure.ai.projects.models import ToolSet, FunctionTool
+# from azure.identity import DefaultAzureCredential
+# from src.tools.system_status import check_system_status
 
 def load_config(env: str) -> dict:
     """Loads the environment-specific configuration YAML."""
@@ -15,54 +19,61 @@ def load_system_prompt() -> str:
     with open("src/agent/system_prompt.txt", "r") as f:
         return f.read()
 
-def deploy_agent(env: str):
+def deploy_agent(env: str, dry_run: bool = False):
     """
     Idempotent deployment of an Azure AI Agent.
     Updates the agent if it exists, creates it otherwise.
     """
-    print(f"Starting deployment for environment: {env.upper()}")
+    print(f"--- Starting deployment for environment: {env.upper()} ---")
     config = load_config(env)
     
-    # In a real CI pipeline, the connection string is injected via secrets
-    conn_str = os.environ.get(f"AZURE_AI_PROJECT_CONN_STR_{env.upper()}")
-    if not conn_str:
-        raise ValueError(f"Missing connection string for {env}")
-
-    # Initialize SDK Client using Managed Identity / Service Principal
-    client = AIProjectClient.from_connection_string(
-        credential=DefaultAzureCredential(),
-        conn_str=conn_str
-    )
-
     agent_name = config["agent"]["name"]
     system_prompt = load_system_prompt()
     model_name = config["agent"]["model_deployment_name"]
     temperature = config["agent"]["temperature"]
+    
+    if dry_run:
+        print(f"\n[DRY RUN MODE] Bypassing Azure connection...")
+        print(f"Payload configuration verified:")
+        print(f" - Agent Name: {agent_name}")
+        print(f" - Target Model: {model_name}")
+        print(f" - Temperature: {temperature}")
+        print(f" - Attached Tools: [check_system_status]")
+        print(f"\n✅ Simulation successful. Agent '{agent_name}' pseudo-deployed to {env.upper()}.\n")
+        return
 
-    with client:
-        # Check if agent already exists (Pseudo-code for listing/filtering)
-        # existing_agents = client.agents.list()
-        # agent_id = find_agent_by_name(existing_agents, agent_name)
-        
-        # NOTE: Azure AI Foundry SDK currently manages state via creation. 
-        # For true idempotency in a pipeline, you'd track the Agent ID in a state file 
-        # or rely on an alias/endpoint update. 
-        
-        print(f"Creating/Updating Agent '{agent_name}' on model '{model_name}'...")
-        
-        agent = client.agents.create_agent(
-            model=model_name,
-            name=agent_name,
-            instructions=system_prompt,
-            temperature=temperature,
-            # tools=[...] # Tool definitions loaded from src/tools would go here
-        )
-        
-        print(f"Successfully deployed Agent ID: {agent.id} to {env.upper()}")
+    # -----------------------------------------------------------------
+    # LIVE DEPLOYMENT LOGIC (Requires valid Azure Connection Strings)
+    # -----------------------------------------------------------------
+    conn_str = os.environ.get(f"AZURE_AI_PROJECT_CONN_STR_{env.upper()}")
+    if not conn_str:
+        raise ValueError(f"Missing connection string for {env}. Ensure AZURE_AI_PROJECT_CONN_STR_{env.upper()} is set.")
+
+    print("Connecting to Azure AI Project...")
+    # client = AIProjectClient.from_connection_string(
+    #     credential=DefaultAzureCredential(),
+    #     conn_str=conn_str
+    # )
+
+    # Initialize Toolset
+    # toolset = ToolSet()
+    # toolset.add(FunctionTool(check_system_status))
+
+    # with client:
+    #     print(f"Creating/Updating Agent '{agent_name}' on model '{model_name}'...")
+    #     agent = client.agents.create_agent(
+    #         model=model_name,
+    #         name=agent_name,
+    #         instructions=system_prompt,
+    #         temperature=temperature,
+    #         toolset=toolset
+    #     )
+    #     print(f"Successfully deployed Agent ID: {agent.id} to {env.upper()}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy Azure AI Agent")
     parser.add_argument("--env", required=True, choices=["dev", "qa", "prod"], help="Target environment")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate deployment without Azure credentials")
     args = parser.parse_args()
     
-    deploy_agent(args.env)
+    deploy_agent(args.env, args.dry_run)

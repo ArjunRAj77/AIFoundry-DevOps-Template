@@ -1,0 +1,3 @@
+{"query": "Is the database down?", "expected_response": "Operational - 12ms latency", "context": "System status shows database is operational with 12ms latency."}
+{"query": "Why are payments failing?", "expected_response": "The payment gateway is currently experiencing degraded performance due to a high error rate on the Stripe API.", "context": "Payment gateway status is Degraded - High error rate on Stripe API."}
+{"query": "What is the status of the frontend?", "expected_response": "The frontend service is fully operational with 100% uptime.", "context": "Frontend status is Operational - 100% uptime."}
