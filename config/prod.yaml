@@ -8,3 +8,6 @@ agent:
   temperature: 0.2 # Lower temp for more deterministic prod behavior
 tools:
   database_connection: "prod_db_readonly_endpoint"
+knowledge_base:
+  ai_search_connection_name: "prod-search-connection"
+  index_name: "kb-index-prod"

@@ -8,3 +8,6 @@ agent:
   temperature: 0.7
 tools:
   database_connection: "dev_db_endpoint"
+knowledge_base:
+  ai_search_connection_name: "dev-search-connection"
+  index_name: "kb-index-dev"

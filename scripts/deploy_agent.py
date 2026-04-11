@@ -4,7 +4,7 @@ import argparse
 
 # In a real environment, you import the Azure SDK:
 # from azure.ai.projects import AIProjectClient
-# from azure.ai.projects.models import ToolSet, FunctionTool
+# from azure.ai.projects.models import ToolSet, FunctionTool, AzureAISearchTool
 # from azure.identity import DefaultAzureCredential
 # from src.tools.system_status import check_system_status
 
@@ -32,6 +32,10 @@ def deploy_agent(env: str, dry_run: bool = False):
     model_name = config["agent"]["model_deployment_name"]
     temperature = config["agent"]["temperature"]
     
+    # Knowledge Base (Azure AI Search) Config
+    search_conn = config.get("knowledge_base", {}).get("ai_search_connection_name", "None")
+    search_index = config.get("knowledge_base", {}).get("index_name", "None")
+    
     if dry_run:
         print(f"\n[DRY RUN MODE] Bypassing Azure connection...")
         print(f"Payload configuration verified:")
@@ -39,6 +43,7 @@ def deploy_agent(env: str, dry_run: bool = False):
         print(f" - Target Model: {model_name}")
         print(f" - Temperature: {temperature}")
         print(f" - Attached Tools: [check_system_status]")
+        print(f" - Knowledge Base attached: [Index: '{search_index}' via Connection: '{search_conn}']")
         print(f"\n✅ Simulation successful. Agent '{agent_name}' pseudo-deployed to {env.upper()}.\n")
         return
 
@@ -57,7 +62,18 @@ def deploy_agent(env: str, dry_run: bool = False):
 
     # Initialize Toolset
     # toolset = ToolSet()
+    
+    # 1. Attach custom Python Functions
     # toolset.add(FunctionTool(check_system_status))
+    
+    # 2. Attach Knowledge Base (Azure AI Search Index)
+    # To get the connection_id programmatically, you would query the project connections:
+    # search_connection = client.connections.get(connection_name=search_conn)
+    # ai_search_tool = AzureAISearchTool(
+    #     index_name=search_index,
+    #     connection_id=search_connection.id
+    # )
+    # toolset.add(ai_search_tool)
 
     # with client:
     #     print(f"Creating/Updating Agent '{agent_name}' on model '{model_name}'...")
