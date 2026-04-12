@@ -4,9 +4,9 @@ An enterprise-grade, end-to-end CI/CD template for managing and promoting Azure 
 
 ---
 
-## 🚀 Quick Start for Beginners (Local Testing)
+## 🚀 Quick Start (Local Testing)
 
-If you are new to this and just want to see how the automation works **without** needing an Azure account or spending any money, follow these steps:
+The scripts in this repository are designed to connect to live Azure resources. 
 
 ### Step 1: Open Your Terminal
 Open PowerShell or your preferred terminal and navigate to this folder:
@@ -15,7 +15,7 @@ cd G:\AI\AIFoundry-DevOps-Template
 ```
 
 ### Step 2: Create a Virtual Environment (Recommended)
-A virtual environment keeps your Python packages isolated so they don't mess up your global system.
+A virtual environment keeps your Python packages isolated.
 ```bash
 python -m venv venv
 ```
@@ -25,30 +25,47 @@ Activate it:
 * **Mac/Linux:** `source venv/bin/activate`
 
 ### Step 3: Install Dependencies
-Install the required Python packages (we created a `requirements.txt` for this):
+Install the required Python SDKs:
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 4: Run a "Dry Run" Deployment
-Let's pretend to deploy the agent to the Development environment. The `--dry-run` flag tells the script to simulate the process without actually trying to connect to Azure:
-```bash
-python scripts/deploy_agent.py --env dev --dry-run
-```
-*You should see a success message showing the agent's configuration!*
+### Step 4: Configure Azure Credentials
+Before deploying, you must provide the connection string for your Azure AI Project. Set this as an environment variable in your terminal:
 
-### Step 5: Run a "Dry Run" Evaluation
-Before an agent goes to Production, it must pass a test. Let's simulate grading the agent using our QA dataset:
-```bash
-python evals/run_evals.py --env qa --threshold 0.85 --dry-run
+**Windows (PowerShell):**
+```powershell
+$env:AZURE_AI_PROJECT_CONN_STR_DEV="your_connection_string_here"
 ```
-*You should see the system simulate grading the agent, passing the 85% threshold, and allowing the promotion!*
+**Mac/Linux:**
+```bash
+export AZURE_AI_PROJECT_CONN_STR_DEV="your_connection_string_here"
+```
+*(Ensure you are also authenticated with Azure via `az login` or appropriate Service Principal credentials if not using a managed identity).*
+
+### Step 5: Run a Live Deployment (Phase 1)
+Deploy the barebones agent to the Development environment:
+```bash
+python scripts/deploy_agent.py --env dev
+```
+*You should see a success message showing the agent's ID deployed to your Azure environment!*
 
 ---
 
-## Architectural Vision
+## Architectural Vision & Phased Rollout
 
 As AI moves from prototype to production, building agents manually in a UI falls apart. This template enforces an **SDK-First, Infrastructure-as-Code (IaC) approach**.
+
+### Current Implementation (Phase 1: Barebones Agent)
+Currently, `deploy_agent.py` is configured for **Phase 1 testing**. It deploys a basic Agent using the `src/agent/system_prompt.txt` instructions and the model configuration from `config/{env}.yaml`, but **without** any custom Python tools or Azure AI Search Knowledge Bases attached. This ensures your basic authentication and CI/CD pipelines are fully operational first.
+
+### Roadmap (Phase 2: Tools & Knowledge Base)
+Once the base pipeline is verified, you can easily activate Phase 2:
+1. Open `scripts/deploy_agent.py`.
+2. Locate the blocks labeled `[COMMENTED OUT FOR PHASE 1]`.
+3. Uncomment the `ToolSet` initialization, the `FunctionTool` logic, and the `AzureAISearchTool` code.
+4. Uncomment `toolset=toolset` in the `create_agent` call.
+5. Deploy to instantly attach custom capabilities to your agent.
 
 ### How Components Connect
 
@@ -57,11 +74,11 @@ As AI moves from prototype to production, building agents manually in a UI falls
 2. **Environment Isolation (`config/`):**
    Configurations define environment-specific bindings. For example, the Dev config binds the agent to a Dev database tool, while Prod binds to a read-only Prod replica.
 3. **Model Flexibility:**
-   The AI model is parameterized in the `config/{env}.yaml` files. You can easily switch models (e.g., from `gpt-4o-mini` to a Llama 3 deployment) by simply updating the `model_deployment_name` string. This allows you to use cheaper, faster models in `dev` and heavy-duty Provisioned Throughput (PTU) models in `prod`.
+   The AI model is parameterized in the `config/{env}.yaml` files. You can easily switch models (e.g., from `gpt-4o-mini` to a Llama 3 deployment) by simply updating the `model_deployment_name`.
 4. **Automated Deployment (`scripts/deploy_agent.py`):**
-   The pipeline executes this script, which uses the `azure-ai-projects` SDK to upsert the agent into the respective Azure AI Project based on the active environment configuration.
+   The pipeline executes this script, which uses the modern `azure-ai-projects` SDK to upsert the agent.
 5. **Data & Evaluation (`evals/`):**
-   Before an agent reaches Production, it must pass a quantitative evaluation using Golden datasets (`evals/datasets/`).
+   Before an agent reaches Production, it must pass a quantitative evaluation using Golden datasets.
 
 ## Project Structure
 

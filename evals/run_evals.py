@@ -20,7 +20,7 @@ def run_evaluations(env: str, threshold: float, dry_run: bool = False):
         print(f"Loaded {len(lines)} test cases from golden dataset.")
 
     if dry_run:
-        print("\n[DRY RUN MODE] Simulating evaluation against QA Agent...")
+        print("\n[PIPELINE TESTING MODE] Simulating evaluation against QA Agent...")
         # SIMULATION: Pretend we evaluated the agent and it did well.
         mock_score = 0.92  # 92% pass rate
         
