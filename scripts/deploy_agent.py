@@ -48,18 +48,18 @@ def deploy_agent(env: str):
         sys.exit(1)
 
     # Validate Connection String exists in environment
-    conn_str = os.environ.get(f"AZURE_AI_PROJECT_CONN_STR_{env.upper()}")
-    if not conn_str:
-        print(f"❌ Error: Missing connection string for {env}. Ensure AZURE_AI_PROJECT_CONN_STR_{env.upper()} is set.")
+    endpoint = os.environ.get(f"AZURE_AI_PROJECT_ENDPOINT_{env.upper()}")
+    if not endpoint:
+        print(f"❌ Error: Missing project endpoint for {env}. Ensure AZURE_AI_PROJECT_ENDPOINT_{env.upper()} is set.")
         sys.exit(1)
 
     print("Authenticating with Azure AI Project...")
     
     try:
         # Initialize the client using the recommended factory method
-        project_client = AIProjectClient.from_connection_string(
+        project_client = AIProjectClient(
             credential=DefaultAzureCredential(),
-            conn_str=conn_str
+            endpoint=endpoint
         )
 
         # [COMMENTED OUT FOR PHASE 1: TOOLSET AND KNOWLEDGE BASE]
