@@ -6,6 +6,7 @@ import argparse
 try:
     from azure.ai.projects import AIProjectClient
     from azure.identity import DefaultAzureCredential
+    from azure.ai.projects.models import PromptAgentDefinition
     
     # [COMMENTED OUT FOR PHASE 1]
     # from azure.ai.projects.models import ToolSet, FunctionTool, AzureAISearchTool
@@ -88,12 +89,16 @@ def deploy_agent(env: str):
             print(f"Creating Agent '{agent_name}' on model '{model_name}'...")
             
             # Base deployment (Active for Phase 1)
-            agent = project_client.agents.create_agent(
+            agent_definition = PromptAgentDefinition(
                 model=model_name,
-                name=agent_name,
                 instructions=system_prompt,
                 temperature=temperature
                 # toolset=toolset  # [COMMENTED OUT FOR PHASE 1]
+            )
+            
+            agent = project_client.agents.create_version(
+                agent_name=agent_name,
+                definition=agent_definition
             )
             
             print(f"✅ Successfully deployed Agent! ID: {agent.id} to {env.upper()}")
