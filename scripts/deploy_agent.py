@@ -54,6 +54,17 @@ def deploy_agent(env: str):
         print(f"❌ Error: Missing project endpoint for {env}. Ensure AZURE_AI_PROJECT_ENDPOINT_{env.upper()} is set.")
         sys.exit(1)
 
+    print("\n" + "="*50)
+    print("🚀 DEPLOYMENT PRE-FLIGHT CHECK")
+    print("="*50)
+    print(f"Environment    : {env.upper()}")
+    print(f"Target Endpoint: {endpoint}")
+    print(f"Agent Name     : {agent_name}")
+    print(f"Model          : {model_name}")
+    print(f"Temperature    : {temperature}")
+    print(f"System Prompt  : {len(system_prompt)} characters loaded")
+    print("="*50 + "\n")
+
     print("Authenticating with Azure AI Project...")
     
     try:
