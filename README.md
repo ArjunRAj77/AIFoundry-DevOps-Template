@@ -19,19 +19,30 @@ Historically, AI agents have been configured through manual clicks in web portal
 * **`scripts/deploy_agent.py`**: The Python deployment engine that authenticates via `DefaultAzureCredential` and pushes the definition to Azure AI Foundry.
 * **`evals/`**: (Placeholder) Directory for programmatic evaluations (like PromptFlow or AI Evaluation) to test the agent before pushing to prod.
 
-## Quick Start Guide
+## Quick Start Guide (CI/CD Deployment)
 
-1. Ensure you have read and fulfilled all requirements in `PREREQUISITES.md`.
-2. Open the `config/dev.yaml` file and ensure `model_deployment_name` matches your base model in Azure (e.g., `gpt-4o-mini`).
-3. Set your project endpoint environment variable:
-   ```bash
-   # Windows (PowerShell)
-   $env:AZURE_AI_PROJECT_ENDPOINT_DEV="https://<hub-name>.services.ai.azure.com/api/projects/<project-name>"
-   ```
-4. Run the deployment script:
-   ```bash
-   python scripts/deploy_agent.py --env dev
-   ```
+This template is designed to run automatically in your CI/CD pipelines (Infrastructure-as-Code), not from a local developer machine. Starter pipelines are included in the repository.
+
+### 1. Base Configuration
+1. Ensure you have fulfilled all Azure requirements in `PREREQUISITES.md`.
+2. Open `config/dev.yaml` and ensure `model_deployment_name` perfectly matches your deployed base model in Azure.
+
+### 2. Pipeline Integration
+
+**Option A: GitHub Actions**
+1. Locate the starter workflow inside the `.github/workflows/` directory.
+2. Go to your repository **Settings > Secrets and variables > Actions**.
+3. Add a Repository Variable named `AZURE_AI_PROJECT_ENDPOINT_DEV` with your endpoint URL.
+4. Set up Azure authentication (we recommend OIDC federated credentials, mapping your repo to an Azure Managed Identity with the **Azure AI Developer** role).
+5. Commit and push to the `main` branch to trigger your first agent deployment!
+
+**Option B: Azure DevOps**
+1. Locate the starter pipeline inside the `azure-devops/` directory.
+2. In Azure DevOps, go to **Pipelines > Library** and create a **Variable Group**. Add `AZURE_AI_PROJECT_ENDPOINT_DEV` to it.
+3. Go to **Project Settings > Service connections** and ensure you have an Azure Resource Manager (ARM) Workload Identity connection mapped to your Azure subscription.
+4. Create a new pipeline referencing the YAML file, link your Variable Group and Service Connection, and click **Run**.
+
+*(Note: If you absolutely must test the script locally before committing, ensure you run `az login` first, set the environment variable locally, and run `python scripts/deploy_agent.py --env dev`.)*
 
 ## Managing Environments
 
