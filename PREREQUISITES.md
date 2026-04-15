@@ -1,56 +1,85 @@
-# Prerequisites
+# System & Infrastructure Prerequisites
 
-Before you can run the deployment pipeline, you must ensure your local development environment and your Azure Cloud environment are configured correctly.
+To successfully deploy and maintain the **AIFoundry-DevOps-Template**, your cloud infrastructure, CI/CD runners, and local development environments must meet the following baseline requirements.
 
-## 1. Azure Cloud Setup
+This document outlines the exact provisioning required before attempting to execute the deployment engine.
 
-You cannot deploy an agent into a vacuum. You must have the following set up in your Azure environment first:
+---
 
-1. **Azure Subscription & Resource Group:** An active billing account.
-2. **Azure AI Foundry Hub & Project:** Create a Hub and an AI Project inside the Azure AI Foundry portal.
-3. **Base Model Deployment:** 
-   * Navigate to your AI Project in the portal.
-   * Go to **Models + endpoints** (or Deployments) -> **Deploy model** -> **Deploy base model**.
-   * Deploy a language model (we recommend `gpt-4o-mini`).
-   * **Write down the Deployment Name!** You will need to put this exact name inside the `config/dev.yaml` file (`model_deployment_name` field).
-4. **Permissions:** The account you use to deploy *must* have the **Azure AI Developer** role assigned to it for the target AI Project.
+## 1. Cloud Infrastructure (Azure)
 
-## 2. Local Environment Setup
+Agents cannot exist without foundational infrastructure. The following Azure resources must be provisioned prior to deployment:
 
-Ensure you have Python installed, then install the required libraries via the `requirements.txt`:
+### Core Resources
+*   **Azure Subscription & Resource Group:** An active subscription with sufficient quota for standard LLM inference.
+*   **Azure AI Foundry Hub:** The overarching workspace container.
+*   **Azure AI Project:** Created within the Hub. This acts as the boundary for your agents, connections, and RBAC.
 
-```bash
-pip install -r requirements.txt
-```
-*(This installs `azure-ai-projects`, `azure-identity`, `pyyaml`, etc.)*
+### The Base Model (Crucial Step)
+As noted in the architectural documentation, the Agent is just a wrapper. You must deploy its "brain" manually or via Terraform first:
+1. Navigate to your AI Project in the Azure AI Foundry portal.
+2. Go to **Models + endpoints** -> **Deploy base model**.
+3. Deploy a target model (e.g., `gpt-4o-mini`).
+4. **Important:** The exact string you define as the deployment name in the portal *must* match the `model_deployment_name` in your `config/*.yaml` files. Failure to match this will result in a `Resource Not Found` error during pipeline execution.
 
-You must also install the **Azure CLI**. Once installed, log in to your Azure account so the script can authenticate using `DefaultAzureCredential`:
+### Identity & Access Management (RBAC)
+The executing identity (your local user account or the CI/CD Service Principal) must be granted the **Azure AI Developer** role scoped to the target AI Project.
 
-```bash
-az login
-```
+---
 
-## 3. Environment Variables
+## 2. CI/CD Configuration (GitHub Actions)
 
-The deployment script requires an environment variable containing the exact URL of your Azure AI Project Endpoint.
+For the automated pipeline to function securely across environments (Dev, QA, Prod), we utilize OpenID Connect (OIDC) instead of long-lived secrets. 
 
-### Finding your Endpoint URL:
-If you are using a modern Azure AI Project, the URL format is:
-`https://<your-ai-services-account-name>.services.ai.azure.com/api/projects/<your-project-name>`
+### GitHub Environment Secrets
+In your GitHub repository settings, configure the following secrets for the OIDC login (`azure/login@v1`):
+*   `AZURE_CLIENT_ID`: The application ID of your deployed Service Principal / Managed Identity.
+*   `AZURE_TENANT_ID`: Your Azure AD Directory ID.
+*   `AZURE_SUBSCRIPTION_ID`: The target subscription ID.
 
-*(If you are using an older Machine Learning Workspace backend, the URL format must be the long-form Resource ID: `https://<region>.api.azureml.ms/subscriptions/<sub-id>/resourceGroups/<rg-name>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>`)*
+### Environment-Specific Variables
+The GitHub pipeline expects the target endpoints to be injected at runtime:
+*   `AZURE_AI_PROJECT_ENDPOINT_DEV`
+*   `AZURE_AI_PROJECT_ENDPOINT_QA`
+*   `AZURE_AI_PROJECT_ENDPOINT_PROD`
 
-### Setting the Variable:
-Set the variable for the environment you are targeting. For development (`--env dev`):
+---
 
-**PowerShell (Windows):**
+## 3. Local Development Environment
+
+If you are developing custom tools (`src/tools/`) or running the deployment engine locally for debugging, ensure the following setup:
+
+### Toolchain
+*   **Python 3.11+**
+*   **Azure CLI:** Required for local `DefaultAzureCredential` authentication.
+
+### Setup Steps
+1. **Clone & Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Authenticate with Azure:**
+   ```bash
+   az login
+   ```
+   *(Ensure you log in with an account that has the Azure AI Developer role for the project).*
+
+### Local Environment Variables
+The deployment script (`deploy_agent.py`) dynamically pulls the project endpoint from your system variables based on the target environment.
+
+**Modern Hub URL Format:**
+`https://<hub-name>.services.ai.azure.com/api/projects/<project-name>`
+
+*(Legacy API Note: If using an older Machine Learning Workspace backend, construct the full ARM Resource ID URL: `https://<region>.api.azureml.ms/subscriptions/<sub-id>/resourceGroups/<rg-name>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>`)*
+
+**Injecting the Variable (Windows / PowerShell):**
 ```powershell
-$env:AZURE_AI_PROJECT_ENDPOINT_DEV="<your-endpoint-url-here>"
+$env:AZURE_AI_PROJECT_ENDPOINT_DEV="https://your-hub.services.ai.azure.com/api/projects/your-project"
 ```
 
-**Bash (Linux/Mac):**
+**Injecting the Variable (Linux / Mac):**
 ```bash
-export AZURE_AI_PROJECT_ENDPOINT_DEV="<your-endpoint-url-here>"
+export AZURE_AI_PROJECT_ENDPOINT_DEV="https://your-hub.services.ai.azure.com/api/projects/your-project"
 ```
 
-Once this is set, your system is fully pre-flighted and ready to deploy via the instructions in `README.md`.
+Once the cloud resources are provisioned and your endpoint variable is set, you are cleared to proceed to the deployment phase documented in `README.md`.

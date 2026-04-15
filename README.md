@@ -1,56 +1,96 @@
-# AIFoundry DevOps Template
+# Enterprise AI Agent CI/CD Pipeline (Azure AI Foundry)
 
-Welcome to the **AIFoundry DevOps Template**. This project provides a production-ready, Infrastructure-as-Code (IaC) CI/CD pipeline template for managing and deploying AI Agents into Azure AI Foundry.
+[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?logo=github-actions)](.github/workflows/ai-agent-ci-cd.yml)
+[![Azure AI Projects SDK](https://img.shields.io/badge/SDK-Azure%20AI%20Projects%20v2.0%2B-0078D4?logo=microsoft-azure)](https://pypi.org/project/azure-ai-projects/)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org/)
 
-## What Does This Do?
+A production-grade, GitOps-driven deployment engine for Azure AI Foundry Agents. 
 
-Historically, AI agents have been configured through manual clicks in web portals. This template allows you to define your agents, their system prompts, temperatures, models, and tools strictly in code. 
+This repository provides an end-to-end **Infrastructure-as-Code (IaC)** pipeline to manage, version, and deploy AI Agents programmatically. By moving away from manual "Click-Ops" in the Azure Portal, this template ensures deterministic, reproducible, and highly trackable AI deployments across all environments (Dev, QA, Prod).
 
-**Benefits of this setup:**
-1. **Version Control for AI:** Your `system_prompt.txt` and `config/` YAML files live in source control. Any changes to the agent's behavior are tracked by Git commits.
-2. **Deterministic Deployments:** Running the deployment script programmatically ensures that QA, DEV, and PROD environments are identical. No more "it works on my machine" AI bugs.
-3. **Automatic Versioning:** The pipeline leverages the modern Azure AI Projects v2+ SDK (`create_version()`). This means every time the pipeline runs, it does not destroy your agent—it automatically stamps a new version (v1, v2, v3, etc.) allowing for safe rollbacks and A/B testing.
-4. **Separation of Concerns:** The base model (e.g., `gpt-4o-mini`) acts as the "brain" and runs continuously. The Agent acts as the wrapper (the personality, the memory, the tools). You manage the Agent code here while keeping the underlying model stable.
+---
 
-## Architecture
+## 🎯 The Problem This Solves
 
-* **`src/agent/system_prompt.txt`**: The core instructions for your AI agent.
-* **`config/*.yaml`**: Environment-specific overrides (DEV, QA, PROD) containing the target base model and temperature.
-* **`scripts/deploy_agent.py`**: The Python deployment engine that authenticates via `DefaultAzureCredential` and pushes the definition to Azure AI Foundry.
-* **`evals/`**: (Placeholder) Directory for programmatic evaluations (like PromptFlow or AI Evaluation) to test the agent before pushing to prod.
+Historically, AI agent configurations (System Prompts, Temperatures, Tool bindings) are manually configured via web UIs. This leads to configuration drift, untracked prompt changes, and the classic *"it works in Dev but hallucinates in Prod"* dilemma.
 
-## Quick Start Guide (CI/CD Deployment)
+**Our Architecture Enforces:**
+1. **Version Control for AI:** Your `system_prompt.txt` and environment configurations (`config/*.yaml`) live in source control. Every behavior change is tied to a Git commit and code review.
+2. **Immutable Versioning:** Leveraging the modern Azure AI Projects v2.0+ SDK (`create_version()`), deployments do not overwrite existing agents. Each pipeline run stamps a new, immutable version (e.g., `v1`, `v2`), enabling instantaneous rollbacks.
+3. **Separation of Concerns (Brain vs. Wrapper):** The underlying Large Language Model (e.g., `gpt-4o-mini`) is managed separately as foundational infrastructure. This repository manages the **Agent**—the wrapper containing the personality, tools, and context.
+4. **Secretless Authentication:** Utilizes OpenID Connect (OIDC) and `DefaultAzureCredential` for zero-trust CI/CD execution.
 
-This template is designed to run automatically in your CI/CD pipelines (Infrastructure-as-Code), not from a local developer machine. Starter pipelines are included in the repository.
+---
 
-### 1. Base Configuration
-1. Ensure you have fulfilled all Azure requirements in `PREREQUISITES.md`.
-2. Open `config/dev.yaml` and ensure `model_deployment_name` perfectly matches your deployed base model in Azure.
+## 🏗️ Repository Architecture
 
-### 2. Pipeline Integration
+```text
+.
+├── .github/workflows/       # CI/CD Pipeline definitions
+│   └── ai-agent-ci-cd.yml   # Multi-stage GitHub Actions workflow
+├── config/                  # Deterministic environment configurations
+│   ├── dev.yaml
+│   └── prod.yaml
+├── evals/                   # Automated AI quality evaluations
+│   └── run_evals.py
+├── scripts/                 # Core deployment engine
+│   └── deploy_agent.py      # Uses Azure AI SDK to create/update agents
+├── src/
+│   ├── agent/               
+│   │   └── system_prompt.txt # The Agent's core instructions/persona
+│   └── tools/               # Custom Python Functions bound to the agent
+│       └── system_status.py
+├── PREREQUISITES.md         # Infrastructure requirements
+└── requirements.txt         # Python dependencies
+```
 
-**Option A: GitHub Actions**
-1. Locate the starter workflow inside the `.github/workflows/` directory.
-2. Go to your repository **Settings > Secrets and variables > Actions**.
-3. Add a Repository Variable named `AZURE_AI_PROJECT_ENDPOINT_DEV` with your endpoint URL.
-4. Set up Azure authentication (we recommend OIDC federated credentials, mapping your repo to an Azure Managed Identity with the **Azure AI Developer** role).
-5. Commit and push to the `main` branch to trigger your first agent deployment!
+---
 
-**Option B: Azure DevOps**
-1. Locate the starter pipeline inside the `azure-devops/` directory.
-2. In Azure DevOps, go to **Pipelines > Library** and create a **Variable Group**. Add `AZURE_AI_PROJECT_ENDPOINT_DEV` to it.
-3. Go to **Project Settings > Service connections** and ensure you have an Azure Resource Manager (ARM) Workload Identity connection mapped to your Azure subscription.
-4. Create a new pipeline referencing the YAML file, link your Variable Group and Service Connection, and click **Run**.
+## 🚀 CI/CD Pipeline Flow
 
-*(Note: If you absolutely must test the script locally before committing, ensure you run `az login` first, set the environment variable locally, and run `python scripts/deploy_agent.py --env dev`.)*
+This repository implements a rigorous 4-Gate deployment strategy:
 
-## Managing Environments
+```mermaid
+graph LR
+    A[Git Push (main)] --> B[Gate 1: Lint & Unit Tests]
+    B --> C[Gate 2: Deploy to Dev]
+    C --> D[Gate 3: Deploy to QA & Run Evals]
+    D --> E{Gate 4: Manual Approval}
+    E -->|Approved| F[Deploy to Production]
+    E -->|Rejected| G[Halt]
+```
 
-To deploy to QA or PROD, you must:
-1. Create a `config/qa.yaml` or `config/prod.yaml`.
-2. Set the corresponding environment variables: `AZURE_AI_PROJECT_ENDPOINT_QA` or `AZURE_AI_PROJECT_ENDPOINT_PROD`.
-3. Pass the correct flag to the script: `--env qa`
+1. **Lint & Test:** Validates custom Python tools (`src/tools/`) using `pytest` and `flake8`.
+2. **Dev Deployment:** Authenticates via OIDC, parses `config/dev.yaml`, and executes `deploy_agent.py` against the Dev Foundry endpoint.
+3. **QA & Evaluate:** Deploys to QA and triggers `run_evals.py` to run batch evaluations (e.g., measuring hallucination rates against a strict threshold).
+4. **Production Gate:** Pipeline pauses. Requires manual human sign-off via GitHub Environments before pushing the exact same deterministic artifact to Prod.
 
-## Extending the Agent (Phase 2)
+---
 
-Once the base deployment works, you can easily attach specialized tools (like Python functions or Azure AI Search Knowledge Bases). Look inside `scripts/deploy_agent.py` for the commented-out `ToolSet` blocks. You can uncomment these to inject tools natively into the agent definition.
+## 🛠️ Phased Deployment Strategy
+
+When building Enterprise AI, do not deploy the model, prompt, and custom tools all at once. We adhere to a strict phased rollout:
+
+### Phase 1: The Barebones Agent (Current Default)
+Establish the pipeline, authenticate the service principal, and verify the model connection. In this phase, the agent is deployed with **only** the `model_deployment_name`, `system_prompt`, and `temperature`. 
+
+### Phase 2: Tooling & Knowledge Bases
+Once the Phase 1 pipeline is green across all environments, uncomment the `ToolSet` logic in `scripts/deploy_agent.py`. 
+- Wrap standard Python functions using `FunctionTool(my_func)`
+- Bind Azure AI Search indexes via `AzureAISearchTool`
+- Re-run the pipeline to inject capabilities into the Agent safely.
+
+---
+
+
+## ⚠️ Troubleshooting & Architectural Gotchas
+
+| Error / Symptom | Root Cause & Resolution |
+| :--- | :--- |
+| **"Resource Not Found" during deployment** | The `model_deployment_name` in your `yaml` config does not exactly match the name of the deployed base model in the Azure Portal, OR the base model hasn't been deployed yet. The agent cannot exist without its brain. |
+| **Missing `create_agent` method** | You are referencing outdated v1.0 docs. This repository uses the modern v2.0+ SDK which replaces `create_agent` with `create_version(agent_name, definition=PromptAgentDefinition)`. |
+| **`AIProjectClient` Auth Failure** | The old `from_connection_string` method is deprecated. We strictly use `AIProjectClient(endpoint, credential=DefaultAzureCredential())`. Ensure `az login` is active locally, or OIDC is configured in CI. |
+
+---
+
+*Maintained by the Platform Engineering Team. For architectural questions, refer to the internal DevOps playbook.*
