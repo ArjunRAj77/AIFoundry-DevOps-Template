@@ -52,12 +52,12 @@ This repository implements a rigorous 4-Gate deployment strategy:
 
 ```mermaid
 graph LR
-    A[Git Push (main)] --> B[Gate 1: Lint & Unit Tests]
-    B --> C[Gate 2: Deploy to Dev]
-    C --> D[Gate 3: Deploy to QA & Run Evals]
-    D --> E{Gate 4: Manual Approval}
-    E -->|Approved| F[Deploy to Production]
-    E -->|Rejected| G[Halt]
+    A["Git Push (main)"] --> B["Gate 1: Lint & Unit Tests"]
+    B --> C["Gate 2: Deploy to Dev"]
+    C --> D["Gate 3: Deploy to QA & Run Evals"]
+    D --> E{"Gate 4: Manual Approval"}
+    E -->|Approved| F["Deploy to Production"]
+    E -->|Rejected| G["Halt"]
 ```
 
 1. **Lint & Test:** Validates custom Python tools (`src/tools/`) using `pytest` and `flake8`.
