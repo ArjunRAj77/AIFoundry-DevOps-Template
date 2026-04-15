@@ -93,4 +93,4 @@ Once the Phase 1 pipeline is green across all environments, uncomment the `ToolS
 
 ---
 
-*Maintained by the Platform Engineering Team. For architectural questions, refer to the internal DevOps playbook.*
+*Contributions are welcome! If you would like to propose an improvement, fix a bug, or add new capabilities to the deployment engine, please submit a Pull Request.*
